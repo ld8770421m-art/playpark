@@ -6,11 +6,13 @@
 <title>Play Park — 6 little games</title>
 <meta name="theme-color" content="#FFF6E3">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- SECURITY: this page may only run its own code and load nothing from the network -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=()">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#33302B; --paper:#FFF6E3; --paper2:#FFEDCB;
@@ -20,7 +22,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{
-  font-family:'Baloo 2','Comic Sans MS',cursive; background:var(--paper); color:var(--ink);
+  font-family:casual,'Comic Sans MS','Comic Neue','Chalkboard SE',cursive; background:var(--paper); color:var(--ink);
   overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; overscroll-behavior:none;
 }
