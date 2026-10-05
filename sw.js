@@ -1,4 +1,4 @@
-const CACHE='playpark-v3';
+const CACHE='playpark-v4';
 const ASSETS=['./','./index.html','./manifest.json','./icon.svg'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
