@@ -171,6 +171,11 @@ svg{-webkit-user-drag:none}
 .bbird.ruffle svg{animation:ruffleA .55s ease}
 @keyframes ruffleA{15%{transform:scale(1.22) rotate(-7deg)}35%{transform:scale(1.06) rotate(6deg)}
   55%{transform:scale(1.18) rotate(-5deg)}75%{transform:scale(1.06) rotate(4deg)}}
+/* mirrored ruffle so left-flying birds stay flipped while shaking */
+.bbird.left.ruffle svg{animation:ruffleAL .55s ease}
+@keyframes ruffleAL{15%{transform:scaleX(-1) scale(1.22) rotate(-7deg)}
+  35%{transform:scaleX(-1) scale(1.06) rotate(6deg)}55%{transform:scaleX(-1) scale(1.18) rotate(-5deg)}
+  75%{transform:scaleX(-1) scale(1.06) rotate(4deg)}}
 
 /* ---------- MOLE ---------- */
 .mole-field{flex:1;display:grid;grid-template-columns:repeat(3,var(--bw));grid-template-rows:repeat(2,var(--bh));
@@ -591,7 +596,7 @@ const starSVG=(cls='')=>`<svg class="${cls}" viewBox="0 0 24 24"><path d="${star
 
 /* ============ sound — ONE language for all games ============
    correct → bright high BELL · wrong → soft "cross" buzz
-   tap → neutral click · squawk → the red bird! */
+   tap → neutral click · squawk(level) → the red bird, angrier each poke */
 const Sfx=(()=>{
   let ctx=null, muted=false;
   try{muted=localStorage.getItem('pp_mute')==='1'}catch(e){}
@@ -641,22 +646,24 @@ const Sfx=(()=>{
         o.start(n+t); o.stop(n+t+d+.03);
       });
     },
-    /* the red bird: LOUD harsh screech with vibrato */
-    squawk(){
+    /* the red bird: screech that gets higher, louder and more frantic per poke (1–3) */
+    squawk(level=1){
       const c=ac(); if(!c)return; const n=c.currentTime;
+      const lv=Math.min(3,Math.max(1,level));
+      const base=1250+lv*170, dur=.4+lv*.07, vol=Math.min(.42,.3+lv*.05);
       [0,9].forEach(det=>{
         const o=c.createOscillator(),g=c.createGain();
         const lfo=c.createOscillator(),lg=c.createGain();
         o.type='sawtooth';
-        o.frequency.setValueAtTime(1350+det*28,n);
-        o.frequency.exponentialRampToValueAtTime(520,n+.42);
-        lfo.frequency.value=26; lg.gain.value=130;
+        o.frequency.setValueAtTime(base+det*28,n);
+        o.frequency.exponentialRampToValueAtTime(Math.max(220,540-lv*70),n+dur);
+        lfo.frequency.value=24+lv*8; lg.gain.value=120+lv*35;
         lfo.connect(lg); lg.connect(o.frequency);
         g.gain.setValueAtTime(.0001,n);
-        g.gain.linearRampToValueAtTime(.32,n+.02);
-        g.gain.exponentialRampToValueAtTime(.0001,n+.46);
+        g.gain.linearRampToValueAtTime(vol,n+.02);
+        g.gain.exponentialRampToValueAtTime(.0001,n+dur+.04);
         o.connect(g); g.connect(c.destination);
-        o.start(n); o.stop(n+.5); lfo.start(n); lfo.stop(n+.5);
+        o.start(n); o.stop(n+dur+.08); lfo.start(n); lfo.stop(n+dur+.08);
       });
     },
     pop(){tone(880,.06,'square',.13,300)},
@@ -871,7 +878,8 @@ const HOG_SVG=`<svg class="hog" viewBox="0 0 120 130" preserveAspectRatio="xMidY
   <path d="M53 108 q7 6 14 0" fill="none" stroke="${INK}" stroke-width="3.5" stroke-linecap="round"/>
 </svg>`;
 
-/* the red bird (facing right; flipped with CSS when flying left) */
+/* the red bird (facing right; flipped with CSS when flying left).
+   brows stay hidden until the first poke, then stay on */
 const BIRD_SVG=`<svg viewBox="0 0 120 90">
   <path d="M20 48 L2 34 L10 50 L2 66 Z" fill="#C93434" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
   <ellipse cx="56" cy="50" rx="32" ry="25" fill="#E8483C" stroke="${INK}" stroke-width="4"/>
@@ -880,6 +888,7 @@ const BIRD_SVG=`<svg viewBox="0 0 120 90">
   <path d="M101 30 L117 35 L101 42 Z" fill="#FFA23E" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round"/>
   <circle cx="90" cy="30" r="5.5" fill="#fff" stroke="${INK}" stroke-width="2.5"/>
   <circle cx="91.5" cy="31" r="2.4" fill="${INK}"/>
+  <g class="brows" opacity="0"><path d="M83 20 L97 25" stroke="${INK}" stroke-width="4.5" stroke-linecap="round"/></g>
   <path d="M74 16 q8 -10 16 -5 q-1 9 -10 10 q-6 0 -6 -5 Z" fill="#C93434" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
   <g class="wing"><path d="M46 46 q-18 -13 -34 -4 q11 17 34 14 Z" fill="#C93434" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/></g>
 </svg>`;
@@ -892,7 +901,7 @@ const GAMES={
   tune:{name:'Copy the Tune',color:'#A884E0',
     blurb:'A big-kid game! The frog sings a little song — listen carefully, then tap the pads back in the same order.'},
   bubbles:{name:'Bubble Sky',color:'#5BB8E8',
-    blurb:'Bubbles of every size drift around the sky — pop as many as you can with your fingers! But look out for the red bird…'},
+    blurb:'Bubbles of every size drift around the sky — pop as many as you can with your fingers! Poke the red bird and it gets crosser and faster… up to three times!'},
   mole:{name:'Mole Meadow',color:'#4CC38A',
     blurb:'Tap the moles as they pop out of their burrows — but don\u2019t tickle the prickly hedgehogs!'},
   pattern:{name:'Pattern Party',color:'#FFA23E',
@@ -994,17 +1003,19 @@ Games.memory={
     } }
 };
 
-/* ================= GAME 2 : BUBBLE SKY (multi-touch popping) ================= */
+/* ================= GAME 2 : BUBBLE SKY (multi-touch popping, 3-poke bird) ================= */
 Games.bubbles={
-  popped:0,GOAL:20,birdsTouched:0,alive:false,
+  popped:0,GOAL:20,birdPokes:0,birdMaxed:false,alive:false,
   bubbles:[],birds:[],timers:[],spawnT:null,birdT:null,_raf:null,_last:0,
   COLORS:['#5BB8E8','#FF8FAE','#FFC63F','#4CC38A','#FFA23E','#A884E0'],
+  /* speed multiplier per poke: 1 touch, 2 touches, 3 touches */
+  POKESP:[1,1.7,2.4,3.4],
   start(){
     this.stop(); this.alive=true;
-    Object.assign(this,{popped:0,birdsTouched:0});
+    Object.assign(this,{popped:0,birdPokes:0,birdMaxed:false});
     makeDots($('#bubDots'),10); setDots($('#bubDots'),0);
     $('#bubHint').classList.remove('off');
-    this.maintain();                      /* keeps 7 bubbles drifting at all times */
+    this.maintain();
     this.scheduleBird(3500);
     this._last=0;
     this._raf=requestAnimationFrame(t=>this.loop(t));
@@ -1032,7 +1043,7 @@ Games.bubbles={
     b._x=rnd(size/2+8,Math.max(size/2+9,r.width-size/2-8));
     b._y=rnd(size/2+8,Math.max(size/2+9,r.height-size/2-8));
     const a=rnd(0,Math.PI*2);
-    const sp=rnd(22,52)*(1+(150-size)/240);   /* smaller = a bit zippier */
+    const sp=rnd(22,52)*(1+(150-size)/240);
     b._vx=Math.cos(a)*sp; b._vy=Math.sin(a)*sp;
     b._ph=rnd(0,6);
     b.style.left=b._x+'px'; b.style.top=b._y+'px';
@@ -1048,12 +1059,14 @@ Games.bubbles={
     if(this.popped===4)$('#bubHint').classList.add('off');
     const el=b; this.timers.push(setTimeout(()=>el.remove(),340));
     if(this.popped>=this.GOAL){ this.alive=false;
-      const msg=this.birdsTouched>0
-        ?'All bubbles popped — and you woke the red bird!'
-        :'All bubbles popped! Watch out for that bird…';
+      const msg=this.birdMaxed
+        ?'All bubbles popped — that poor bird got poked 3 times!'
+        :this.birdPokes>0
+          ?'All bubbles popped — and you woke the red bird!'
+          :'All bubbles popped! Watch out for that bird…';
       celebrate('bubbles',3,msg); }
   },
-  /* ---- the red bird ---- */
+  /* ---- the red bird: pokable up to 3 times, faster each poke ---- */
   scheduleBird(d){ if(!this.alive)return;
     clearTimeout(this.birdT);
     this.birdT=setTimeout(()=>this.spawnBird(),d); },
@@ -1064,33 +1077,43 @@ Games.bubbles={
     const el=document.createElement('div');
     el.className='bbird'+(dir<0?' left':'');
     el.innerHTML=BIRD_SVG;
-    el._dir=dir; el._t=0; el._startled=false;
-    el._speed=rnd(120,175);
+    el._dir=dir; el._t=0;
+    el._pokes=0;                                 /* 0–3 pokes */
+    el._baseSpeed=rnd(120,175);
+    el._speed=el._baseSpeed;
     el._baseY=rnd(.15,.62)*r.height;
     el._x=dir>0?-130:r.width+130; el._y=el._baseY;
     el.style.left=el._x+'px'; el.style.top=el._y+'px';
     st.appendChild(el); this.birds.push(el);
-    this.scheduleBird(rnd(7000,12000));   /* next visitor booked */
+    this.scheduleBird(rnd(7000,12000));
   },
-  startle(bd){
-    if(bd._startled)return;
-    bd._startled=true; this.birdsTouched++;
-    Sfx.squawk();
-    bd.classList.add('ruffle');
-    const stR=$('#bubStage').getBoundingClientRect();
-    Fx.burst(stR.left+bd._x,stR.top+bd._y+15,16,
-      {shape:'circle',colors:['#E8483C','#C93434','#FFC63F','#FFB199']});
+  poke(bd){
+    if(bd._pokes>=3)return;                      /* up to 3 touches, then it's had enough */
+    bd._pokes++; this.birdPokes++;
+    if(bd._pokes===3) this.birdMaxed=true;
+    Sfx.squawk(bd._pokes);                       /* higher + louder each time */
+    bd._speed=bd._baseSpeed*this.POKESP[bd._pokes];  /* faster each time */
+    /* angrier look: quicker wingbeats, more saturated red, brows appear on poke 1 */
+    const wing=bd.querySelector('.wing');
+    if(wing) wing.style.animationDuration=Math.max(.16,.38-bd._pokes*.07)+'s';
+    bd.style.filter=`saturate(${(1+bd._pokes*.3).toFixed(2)}) contrast(${(1+bd._pokes*.06).toFixed(2)})`;
+    if(bd._pokes===1){ const br=bd.querySelector('.brows');
+      if(br) br.setAttribute('opacity','1'); }
+    bd.classList.remove('ruffle'); void bd.offsetWidth; bd.classList.add('ruffle');
     this.timers.push(setTimeout(()=>bd.classList.remove('ruffle'),600));
+    const stR=$('#bubStage').getBoundingClientRect();
+    Fx.burst(stR.left+bd._x,stR.top+bd._y+15,10+bd._pokes*8,
+      {shape:'circle',colors:['#E8483C','#C93434','#FFC63F','#FFB199']});
   },
   /* ---- multi-touch hit testing: EVERY finger pops ---- */
   checkHit(e){
     if(!this.alive)return;
-    if(e.pointerType==='mouse'&&e.buttons===0)return;  /* no popping by mouse-hover */
+    if(e.pointerType==='mouse'&&e.buttons===0)return;
     const st=$('#bubStage'), r=st.getBoundingClientRect();
     const px=e.clientX-r.left, py=e.clientY-r.top;
     for(const bd of this.birds){
-      if(!bd._startled && Math.abs(px-bd._x)<58 && Math.abs(py-(bd._y+15))<48)
-        this.startle(bd);
+      if(bd._pokes<3 && Math.abs(px-bd._x)<58 && Math.abs(py-(bd._y+15))<48)
+        this.poke(bd);
     }
     for(let i=this.bubbles.length-1;i>=0;i--){
       const b=this.bubbles[i], rad=b._size/2+6;
@@ -1115,7 +1138,7 @@ Games.bubbles={
     for(let i=this.birds.length-1;i>=0;i--){
       const bd=this.birds[i];
       bd._t+=dt;
-      bd._x+=bd._dir*bd._speed*(bd._startled?2.4:1)*dt;
+      bd._x+=bd._dir*bd._speed*dt;              /* speed already includes poke multiplier */
       bd._y=bd._baseY+Math.sin(bd._t*3.2)*26;
       bd.style.left=bd._x+'px'; bd.style.top=bd._y+'px';
       if(bd._x<-150||bd._x>r.width+150){
@@ -1126,7 +1149,7 @@ Games.bubbles={
   }
 };
  $('#bubStage').addEventListener('pointerdown',e=>{e.preventDefault();Games.bubbles.checkHit(e)});
- $('#bubStage').addEventListener('pointermove',e=>{Games.bubbles.checkHit(e)}); /* fingers can sweep */
+ $('#bubStage').addEventListener('pointermove',e=>{Games.bubbles.checkHit(e)});
 
 /* ================= GAME 3 : MOLE MEADOW ================= */
 Games.mole={
