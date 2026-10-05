@@ -602,7 +602,11 @@ function starPath(cx,cy,r){let d='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*M
   d+=(i?'L':'M')+(cx+Math.cos(a)*rr).toFixed(1)+' '+(cy+Math.sin(a)*rr).toFixed(1)}return d+'Z'}
 const starSVG=(cls='')=>`<svg class="${cls}" viewBox="0 0 24 24"><path d="${starPath(12,12.8,10.2)}"/></svg>`;
 
-/* ================= sound (tiny synth, no assets) ================= */
+/* ============ sound — ONE language for all games ============
+   correct  → bright high BELL   (every success, every game)
+   wrong    → soft descending "cross" buzz (every mistake, every game)
+   tap      → one neutral click (cards, bubbles, buttons)
+   plus content sounds (tune pads, gulp/chomp) & celebration (ding/tada) */
 const Sfx=(()=>{
   let ctx=null, muted=false;
   try{muted=localStorage.getItem('pp_mute')==='1'}catch(e){}
@@ -618,22 +622,50 @@ const Sfx=(()=>{
     g.gain.exponentialRampToValueAtTime(.0001,n+d);
     o.connect(g); g.connect(c.destination); o.start(n); o.stop(n+d+.05);
   }
+  /* a real bell strike: sine fundamental + inharmonic shimmer partial */
+  function bell(f,t=0,v=.2){
+    const c=ac(); if(!c)return;
+    const n=c.currentTime+t;
+    const o=c.createOscillator(),g=c.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(f,n);
+    g.gain.setValueAtTime(.0001,n); g.gain.linearRampToValueAtTime(v,n+.008);
+    g.gain.exponentialRampToValueAtTime(.0001,n+.6);
+    o.connect(g); g.connect(c.destination); o.start(n); o.stop(n+.65);
+    const o2=c.createOscillator(),g2=c.createGain();
+    o2.type='sine'; o2.frequency.setValueAtTime(f*2.76,n);
+    g2.gain.setValueAtTime(.0001,n); g2.gain.linearRampToValueAtTime(v*.3,n+.005);
+    g2.gain.exponentialRampToValueAtTime(.0001,n+.2);
+    o2.connect(g2); g2.connect(c.destination); o2.start(n); o2.stop(n+.25);
+  }
   return {
     unlock(){ if(!muted) ac(); },
     get muted(){return muted},
     toggle(){ muted=!muted; try{localStorage.setItem('pp_mute',muted?'1':'0')}catch(e){} return muted },
-    click(){tone(560,.07,'triangle',.18,720)},
-    flip(){tone(360,.09,'triangle',.2,560)},
-    pop(){tone(900,.1,'square',.22,240);tone(1400,.07,'sine',.15,500,.01)},
-    match(){[523,659,784].forEach((f,i)=>tone(f,.14,'sine',.22,null,i*.09))},
-    bonk(){tone(190,.16,'square',.28,70)},
-    boing(){tone(170,.12,'sine',.25,430);tone(430,.14,'sine',.2,200,.12)},
-    gulp(){tone(300,.26,'sine',.28,80)},
-    chomp(){tone(150,.07,'square',.2,90);tone(150,.07,'square',.18,90,.12)},
-    whiff(){tone(430,.22,'sine',.14,230)},
-    ding(){tone(1244,.4,'sine',.2,1240);tone(1868,.3,'sine',.08,1860,.02)},
-    tada(){[523,659,784,1046].forEach((f,i)=>tone(f,.18,'triangle',.2,null,i*.11));tone(1046,.5,'sine',.16,null,.44)},
-    note(i){const F=[392,523.25,659.25,783.99];tone(F[i%4],.32,'triangle',.28)},
+    click(){tone(560,.07,'triangle',.16,720)},           /* buttons */
+    tap(){tone(420,.06,'triangle',.13,540)},             /* neutral: cards, locking a bubble */
+    correct(){ bell(1046.5,0,.2); bell(1318.5,.13,.18); }, /* ★ ding-ding! high bell */
+    wrong(){                                             /* ✗ descending cross buzz */
+      const c=ac(); if(!c)return; const n=c.currentTime;
+      [[311,0,.13],[220,.16,.22]].forEach(([f,t,d])=>{
+        const o=c.createOscillator(),g=c.createGain(),fl=c.createBiquadFilter();
+        fl.type='lowpass'; fl.frequency.value=1300;
+        o.type='square'; o.frequency.setValueAtTime(f,n+t);
+        o.frequency.exponentialRampToValueAtTime(f*.8,n+t+d);
+        g.gain.setValueAtTime(.0001,n+t); g.gain.linearRampToValueAtTime(.11,n+t+.012);
+        g.gain.exponentialRampToValueAtTime(.0001,n+t+d);
+        o.connect(fl); fl.connect(g); g.connect(c.destination);
+        o.start(n+t); o.stop(n+t+d+.03);
+      });
+    },
+    /* short physical accents layered with correct/wrong */
+    pop(){tone(880,.06,'square',.13,300)},
+    bonk(){tone(180,.09,'sine',.2,90)},
+    gulp(){tone(300,.22,'sine',.22,80)},
+    chomp(){tone(150,.07,'square',.16,90);tone(150,.07,'square',.14,90,.12)},
+    boing(){tone(170,.12,'sine',.22,430);tone(430,.14,'sine',.18,200,.12)}, /* mascot only */
+    ding(){tone(1244,.4,'sine',.18,1240);tone(1868,.3,'sine',.07,1860,.02)},
+    tada(){[523,659,784,1046].forEach((f,i)=>tone(f,.18,'triangle',.18,null,i*.11));tone(1046,.5,'sine',.14,null,.44)},
+    note(i){const F=[392,523.25,659.25,783.99];tone(F[i%4],.32,'triangle',.26)}, /* tune pads */
   };
 })();
 document.addEventListener('pointerdown',()=>Sfx.unlock(),{capture:true});
@@ -926,18 +958,18 @@ Games.memory={
       board.appendChild(c); }); },
   stop(){ this.timers.forEach(clearTimeout); this.timers=[]; },
   tap(c){ if(this.lock||c.classList.contains('flipped')||c.classList.contains('matched'))return;
-    Sfx.flip(); c.classList.add('flipped');
+    Sfx.tap(); c.classList.add('flipped');
     if(!this.first){this.first=c;return}
     const f=this.first; this.first=null;
     if(f.dataset.k===c.dataset.k){
       f.classList.add('matched'); c.classList.add('matched');
-      this.matches++; setDots($('#memDots'),this.matches); Sfx.match();
+      this.matches++; setDots($('#memDots'),this.matches); Sfx.correct();
       const r=c.getBoundingClientRect();
       Fx.burst(r.left+r.width/2,r.top+r.height/2,14,{shape:'star',colors:['#FFC63F','#FF8FAE','#5BB8E8']});
       if(this.matches===6){ const stars=this.misses<=3?3:this.misses<=7?2:1;
         this.timers.push(setTimeout(()=>celebrate('memory',stars,'What a great memory!'),750)); }
     }else{
-      this.lock=true; this.misses++;
+      this.lock=true; this.misses++; Sfx.wrong();
       this.timers.push(setTimeout(()=>{f.classList.remove('flipped');c.classList.remove('flipped');this.lock=false},820));
     } }
 };
@@ -979,18 +1011,18 @@ Games.pop={
   onBubble(b){ if(!this.alive||this.busy)return;
     if(b.classList.contains('pop')||b.classList.contains('miss'))return;
     if(this.lock===b)return;
-    if(!this.lock){ this.lock=b; b.classList.add('locked'); Sfx.flip();
+    if(!this.lock){ this.lock=b; b.classList.add('locked'); Sfx.tap();
       this.lockT=setTimeout(()=>this.fail(),1500); }
     else { const a=this.lock; this.lock=null; clearTimeout(this.lockT); this.popPair(a,b); } },
   fail(){ if(!this.alive||this.busy)return; this.busy=true;
     clearTimeout(this.roundT);clearTimeout(this.lockT);
-    $('#popLink').classList.add('off'); Sfx.whiff();
+    $('#popLink').classList.add('off'); Sfx.wrong();
     this.bubbles.forEach(b=>b.classList.add('miss'));
     this.respT=setTimeout(()=>{this.bubbles.forEach(b=>b.remove());this.bubbles=[];this.spawn()},680); },
   popPair(a,b){ this.busy=true;
     clearTimeout(this.roundT);clearTimeout(this.lockT);
     $('#popLink').classList.add('off');
-    a.classList.add('pop'); b.classList.add('pop'); Sfx.pop();
+    a.classList.add('pop'); b.classList.add('pop'); Sfx.pop(); Sfx.correct();
     const stR=$('#popStage').getBoundingClientRect();
     [a,b].forEach(el=>{ const x=parseFloat(el.style.left),y=parseFloat(el.style.top);
       Fx.burst(stR.left+x,stR.top+y,22); });
@@ -1026,7 +1058,7 @@ Games.mole={
     const r=b.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height*.4;
     clearTimeout(b._t1);
     if(b.dataset.kind==='mole'){
-      b.classList.add('hit'); Sfx.bonk();
+      b.classList.add('hit'); Sfx.bonk(); Sfx.correct();
       Fx.burst(cx,cy,10,{shape:'star',colors:['#FFC63F','#FFA23E','#FF6F61']});
       this.bonks++; setDots($('#moleDots'),this.bonks);
       this.timers.push(setTimeout(()=>b.classList.remove('up','hit'),240));
@@ -1034,7 +1066,7 @@ Games.mole={
         const stars=this.oops===0?3:this.oops<=2?2:1;
         setTimeout(()=>celebrate('mole',stars,'What quick fingers!'),350); }
     }else{
-      this.oops++; Sfx.boing(); b.classList.add('boing');
+      this.oops++; Sfx.wrong(); b.classList.add('boing');
       this.timers.push(setTimeout(()=>b.classList.remove('up','boing'),360)); } }
 };
 (function buildMoles(){
@@ -1086,6 +1118,7 @@ Games.feed={
     $('#reqNum').textContent=left>0?left+' more!':'Yummy!';
     setDots($('#reqDots'),this.fed); },
   eat(f,mx,my,off){
+    Sfx.correct();   /* ★ bell the moment the right snack is dropped */
     const img=f.querySelector('.fimg'),fr=img.getBoundingClientRect();
     img.style.transition='transform .26s cubic-bezier(.4,0,.9,.4), opacity .26s';
     img.style.transform=`translate(${off.dx+mx-fr.left-fr.width/2}px,${off.dy+my-fr.top-fr.height/2}px) scale(.15)`;
@@ -1096,7 +1129,7 @@ Games.feed={
       this.fed++; this.updateReq();
       if(this.fed>=this.target.count){
         this.timers.push(setTimeout(()=>{
-          monsterEl.classList.add('dance'); Sfx.match();
+          monsterEl.classList.add('dance');
           const r=monsterEl.getBoundingClientRect();
           Fx.burst(r.left+r.width/2,r.top+r.height/3,30);
           this.timers.push(setTimeout(()=>monsterEl.classList.remove('dance'),900));
@@ -1106,7 +1139,7 @@ Games.feed={
           } else this.timers.push(setTimeout(()=>this.next(),1200));
         },450));
       } },280)); },
-  reject(f){ this.mistakes++; Sfx.whiff();
+  reject(f){ this.mistakes++; Sfx.wrong();
     monsterEl.classList.add('shake');
     this.timers.push(setTimeout(()=>monsterEl.classList.remove('shake'),480));
     $('#reqNum').textContent='Bleh!';
@@ -1190,22 +1223,21 @@ Games.tune={
       const f=$('#tuneFrog'); f.classList.remove('sing'); void f.offsetWidth; f.classList.add('sing');
     },500+i*gap)));
     this.timers.push(setTimeout(()=>this.beginInput(),500+this.seq.length*gap+250)); },
-  flash(p,d=360){ const el=$$('.pad')[p]; if(!el)return;
-    el.classList.add('lit'); Sfx.note(p);
+  flash(p,d=360,silent=false){ const el=$$('.pad')[p]; if(!el)return;
+    el.classList.add('lit'); if(!silent) Sfx.note(p);
     this.timers.push(setTimeout(()=>el.classList.remove('lit'),d)); },
   beginInput(){ if(!this.alive)return; this.phase='input'; this.idx=0;
     this.say('Your turn!',true); },
   tapPad(p){ if(!this.alive||this.phase!=='input')return;
-    this.flash(p,280);
-    if(p===this.seq[this.idx]){ this.idx++;
+    if(p===this.seq[this.idx]){ this.flash(p,280); this.idx++;
       if(this.idx>=this.seq.length) this.roundDone(); }
-    else{ this.mistakes++; this.phase='wait'; Sfx.boing();
+    else{ this.mistakes++; this.phase='wait'; Sfx.wrong();
       const f=$('#tuneFrog'); f.classList.remove('sing'); void f.offsetWidth; f.classList.add('oops');
       this.timers.push(setTimeout(()=>f.classList.remove('oops'),500));
       this.say('Oops — listen again…',false);
-      this.timers.push(setTimeout(()=>this.show(),1000)); } },
+      this.timers.push(setTimeout(()=>this.show(),1100)); } },
   roundDone(){ this.phase='wait';
-    setDots($('#tuneDots'),this.round+1); Sfx.match();
+    setDots($('#tuneDots'),this.round+1); Sfx.correct();
     this.say('You got it!',true);
     Fx.burst(innerWidth/2,innerHeight*.42,26);
     this.round++;
@@ -1260,7 +1292,7 @@ Games.pattern={
       ch.appendChild(b); }); },
   pick(item,btn){ if(this.locked)return;
     if(item===this.answer){
-      this.locked=true; Sfx.match();
+      this.locked=true; Sfx.correct();
       const q=$('#patStrip .q');
       q.classList.remove('q','pulse'); q.classList.add('ok','filled');
       q.innerHTML=this.svg(item);
@@ -1273,7 +1305,7 @@ Games.pattern={
         this.timers.push(setTimeout(()=>celebrate('pattern',st,'You spot patterns like a pro!'),1000)); }
       else this.timers.push(setTimeout(()=>this.next(),1400));
     }else{
-      this.mistakes++; Sfx.boing();
+      this.mistakes++; Sfx.wrong();
       btn.classList.remove('shakeit'); void btn.offsetWidth; btn.classList.add('shakeit'); } }
 };
 
