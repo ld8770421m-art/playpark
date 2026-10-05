@@ -153,33 +153,24 @@ svg{-webkit-user-drag:none}
 .card.matched .face.front{background:#E9F9EF}
 @keyframes matchBounce{35%{transform:scale(1.12) rotate(3deg)}70%{transform:scale(.96) rotate(-2deg)}}
 
-/* ---------- POP TOGETHER ---------- */
-#popStage::before,#popStage::after{content:"";position:absolute;border-radius:50%;z-index:0}
-#popStage::before{width:34vw;height:34vw;min-width:260px;min-height:260px;background:#FFE9B8;left:-8%;bottom:-14%}
-#popStage::after{width:26vw;height:26vw;min-width:200px;min-height:200px;background:#D9F0E4;right:-6%;top:-8%}
-.bubble{position:absolute;width:var(--bs);height:var(--bs);border-radius:50%;background:var(--c);
+/* ---------- BUBBLE SKY ---------- */
+#bubStage::before,#bubStage::after{content:"";position:absolute;border-radius:50%;z-index:0}
+#bubStage::before{width:34vw;height:34vw;min-width:260px;min-height:260px;background:#D9EEFB;left:-8%;bottom:-14%}
+#bubStage::after{width:26vw;height:26vw;min-width:200px;min-height:200px;background:#FFE9B8;right:-6%;top:-8%}
+.bbub{position:absolute;width:var(--bs);height:var(--bs);border-radius:50%;background:var(--c);
   border:5px solid var(--ink);box-shadow:0 8px 0 var(--ink), inset -8px -10px 0 rgba(51,48,43,.10);
-  display:grid;place-items:center;z-index:3;transform:translate(-50%,-50%);
-  animation:bob 2.3s ease-in-out infinite alternate}
-.bubble::after{content:"";position:absolute;left:16%;top:12%;width:27%;height:18%;background:#fff;
+  transform:translate(-50%,-50%);z-index:3;pointer-events:none}
+.bbub::after{content:"";position:absolute;left:16%;top:12%;width:27%;height:18%;background:#fff;
   border-radius:50%;transform:rotate(-24deg);opacity:.9}
-@keyframes bob{from{transform:translate(-50%,-50%) translateY(-6px)}to{transform:translate(-50%,-50%) translateY(7px)}}
-.bubble .ring{position:absolute;left:-9px;top:-9px;width:calc(100% + 18px);height:calc(100% + 18px);
-  pointer-events:none}
-.bubble .ring circle{fill:none;stroke:#fff;stroke-width:7;stroke-linecap:round;
-  stroke-dasharray:100;stroke-dashoffset:0;transform:rotate(-90deg);transform-origin:center}
-.bubble.locked .ring circle{animation:drain 1.5s linear forwards}
-@keyframes drain{to{stroke-dashoffset:100}}
-.bubble.pop{animation:popAway .38s ease-in forwards}
-@keyframes popAway{40%{transform:translate(-50%,-50%) scale(1.18)}100%{transform:translate(-50%,-50%) scale(0);opacity:0}}
-.bubble.miss{animation:floatOff .6s ease-in forwards}
-@keyframes floatOff{to{transform:translate(-50%,-50%) translateY(-150px) scale(.65);opacity:0}}
-.link{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;transition:opacity .2s}
-.link.off{opacity:0}
-.link line{stroke:var(--ink);stroke-width:5;stroke-linecap:round;stroke-dasharray:1 16;opacity:.45}
-#plStar{fill:var(--yellow);stroke:var(--ink);stroke-width:2.5;stroke-linejoin:round;
-  transform-box:fill-box;transform-origin:center;animation:pulse 1s ease-in-out infinite alternate}
-@keyframes pulse{from{transform:scale(.8)}to{transform:scale(1.2)}}
+.bbub.pop{animation:popAway .32s ease-in forwards}
+@keyframes popAway{40%{transform:translate(-50%,-50%) scale(1.22)}100%{transform:translate(-50%,-50%) scale(0);opacity:0}}
+.bbird{position:absolute;width:120px;height:90px;transform:translate(-50%,-50%);z-index:4;pointer-events:none}
+.bbird.left svg{transform:scaleX(-1)}
+.bbird .wing{transform-box:fill-box;transform-origin:85% 75%;animation:flap .38s ease-in-out infinite alternate}
+@keyframes flap{from{transform:rotate(8deg)}to{transform:rotate(-32deg)}}
+.bbird.ruffle svg{animation:ruffleA .55s ease}
+@keyframes ruffleA{15%{transform:scale(1.22) rotate(-7deg)}35%{transform:scale(1.06) rotate(6deg)}
+  55%{transform:scale(1.18) rotate(-5deg)}75%{transform:scale(1.06) rotate(4deg)}}
 
 /* ---------- MOLE ---------- */
 .mole-field{flex:1;display:grid;grid-template-columns:repeat(3,var(--bw));grid-template-rows:repeat(2,var(--bh));
@@ -383,10 +374,10 @@ svg{-webkit-user-drag:none}
       <span class="tag">Copy the Tune</span>
       <span class="sstars"></span>
     </button>
-    <button class="spot" data-game="pop" style="--c:#5BB8E8;--bc:#CFE9F8;--br:-7deg;left:81%;top:36%">
+    <button class="spot" data-game="bubbles" style="--c:#5BB8E8;--bc:#CFE9F8;--br:-7deg;left:81%;top:36%">
       <span class="blob"></span>
-      <span class="disc" data-icon="pop"></span>
-      <span class="tag">Pop Together</span>
+      <span class="disc" data-icon="bubbles"></span>
+      <span class="tag">Bubble Sky</span>
       <span class="sstars"></span>
     </button>
     <button class="spot" data-game="mole" style="--c:#4CC38A;--bc:#CFEEDC;--br:-5deg;left:19%;top:74%">
@@ -443,21 +434,17 @@ svg{-webkit-user-drag:none}
     <div class="mem-wrap"><div class="board" id="memBoard"></div></div>
   </section>
 
-  <!-- ================= POP TOGETHER ================= -->
-  <section id="game-pop" class="screen">
+  <!-- ================= BUBBLE SKY ================= -->
+  <section id="game-bubbles" class="screen">
     <header class="gbar">
       <button class="icon-btn" data-home aria-label="home">
         <svg viewBox="0 0 24 24" fill="none" stroke="#33302B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8"/><path d="M5.5 10.5V20a1 1 0 0 0 1 1H10v-5h4v5h3.5a1 1 0 0 0 1-1v-9.5"/></svg>
       </button>
-      <div class="gtitle">Pop Together</div>
-      <div class="dots" id="popDots"></div>
+      <div class="gtitle">Bubble Sky</div>
+      <div class="dots" id="bubDots"></div>
     </header>
-    <div class="stage" id="popStage">
-      <svg class="link off" id="popLink">
-        <line id="plLine" x1="0" y1="0" x2="0" y2="0"/>
-        <g id="plStarP"><path id="plStar" d=""/></g>
-      </svg>
-      <div class="stage-hint" id="popHint">Tap one bubble… then the other one — fast!</div>
+    <div class="stage" id="bubStage">
+      <div class="stage-hint" id="bubHint">Pop the bubbles — but don't touch the red bird!</div>
     </div>
   </section>
 
@@ -603,10 +590,8 @@ function starPath(cx,cy,r){let d='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*M
 const starSVG=(cls='')=>`<svg class="${cls}" viewBox="0 0 24 24"><path d="${starPath(12,12.8,10.2)}"/></svg>`;
 
 /* ============ sound — ONE language for all games ============
-   correct  → bright high BELL   (every success, every game)
-   wrong    → soft descending "cross" buzz (every mistake, every game)
-   tap      → one neutral click (cards, bubbles, buttons)
-   plus content sounds (tune pads, gulp/chomp) & celebration (ding/tada) */
+   correct → bright high BELL · wrong → soft "cross" buzz
+   tap → neutral click · squawk → the red bird! */
 const Sfx=(()=>{
   let ctx=null, muted=false;
   try{muted=localStorage.getItem('pp_mute')==='1'}catch(e){}
@@ -622,7 +607,6 @@ const Sfx=(()=>{
     g.gain.exponentialRampToValueAtTime(.0001,n+d);
     o.connect(g); g.connect(c.destination); o.start(n); o.stop(n+d+.05);
   }
-  /* a real bell strike: sine fundamental + inharmonic shimmer partial */
   function bell(f,t=0,v=.2){
     const c=ac(); if(!c)return;
     const n=c.currentTime+t;
@@ -641,10 +625,10 @@ const Sfx=(()=>{
     unlock(){ if(!muted) ac(); },
     get muted(){return muted},
     toggle(){ muted=!muted; try{localStorage.setItem('pp_mute',muted?'1':'0')}catch(e){} return muted },
-    click(){tone(560,.07,'triangle',.16,720)},           /* buttons */
-    tap(){tone(420,.06,'triangle',.13,540)},             /* neutral: cards, locking a bubble */
-    correct(){ bell(1046.5,0,.2); bell(1318.5,.13,.18); }, /* ★ ding-ding! high bell */
-    wrong(){                                             /* ✗ descending cross buzz */
+    click(){tone(560,.07,'triangle',.16,720)},
+    tap(){tone(420,.06,'triangle',.13,540)},
+    correct(){ bell(1046.5,0,.2); bell(1318.5,.13,.18); },
+    wrong(){
       const c=ac(); if(!c)return; const n=c.currentTime;
       [[311,0,.13],[220,.16,.22]].forEach(([f,t,d])=>{
         const o=c.createOscillator(),g=c.createGain(),fl=c.createBiquadFilter();
@@ -657,15 +641,32 @@ const Sfx=(()=>{
         o.start(n+t); o.stop(n+t+d+.03);
       });
     },
-    /* short physical accents layered with correct/wrong */
+    /* the red bird: LOUD harsh screech with vibrato */
+    squawk(){
+      const c=ac(); if(!c)return; const n=c.currentTime;
+      [0,9].forEach(det=>{
+        const o=c.createOscillator(),g=c.createGain();
+        const lfo=c.createOscillator(),lg=c.createGain();
+        o.type='sawtooth';
+        o.frequency.setValueAtTime(1350+det*28,n);
+        o.frequency.exponentialRampToValueAtTime(520,n+.42);
+        lfo.frequency.value=26; lg.gain.value=130;
+        lfo.connect(lg); lg.connect(o.frequency);
+        g.gain.setValueAtTime(.0001,n);
+        g.gain.linearRampToValueAtTime(.32,n+.02);
+        g.gain.exponentialRampToValueAtTime(.0001,n+.46);
+        o.connect(g); g.connect(c.destination);
+        o.start(n); o.stop(n+.5); lfo.start(n); lfo.stop(n+.5);
+      });
+    },
     pop(){tone(880,.06,'square',.13,300)},
     bonk(){tone(180,.09,'sine',.2,90)},
     gulp(){tone(300,.22,'sine',.22,80)},
     chomp(){tone(150,.07,'square',.16,90);tone(150,.07,'square',.14,90,.12)},
-    boing(){tone(170,.12,'sine',.22,430);tone(430,.14,'sine',.18,200,.12)}, /* mascot only */
+    boing(){tone(170,.12,'sine',.22,430);tone(430,.14,'sine',.18,200,.12)},
     ding(){tone(1244,.4,'sine',.18,1240);tone(1868,.3,'sine',.07,1860,.02)},
     tada(){[523,659,784,1046].forEach((f,i)=>tone(f,.18,'triangle',.18,null,i*.11));tone(1046,.5,'sine',.14,null,.44)},
-    note(i){const F=[392,523.25,659.25,783.99];tone(F[i%4],.32,'triangle',.26)}, /* tune pads */
+    note(i){const F=[392,523.25,659.25,783.99];tone(F[i%4],.32,'triangle',.26)},
   };
 })();
 document.addEventListener('pointerdown',()=>Sfx.unlock(),{capture:true});
@@ -806,29 +807,24 @@ memory:`<svg viewBox="0 0 64 64">
   <g transform="rotate(9 42 30)"><rect x="29" y="12" width="26" height="36" rx="6" fill="#fff" stroke="${INK}" stroke-width="4"/>
   <path d="${starPath(42,30,8.5)}" fill="${INK}"/></g>
 </svg>`,
-pop:`<svg viewBox="0 0 64 64">
-  <circle cx="19" cy="36" r="13" fill="#5BB8E8" stroke="${INK}" stroke-width="4"/>
-  <circle cx="45" cy="36" r="13" fill="#FF6F61" stroke="${INK}" stroke-width="4"/>
-  <circle cx="14" cy="31" r="3" fill="#fff"/><circle cx="40" cy="31" r="3" fill="#fff"/>
-  <path d="${starPath(32,12,7.5)}" fill="#FFC63F" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
+bubbles:`<svg viewBox="0 0 64 64">
+  <circle cx="22" cy="38" r="16" fill="#5BB8E8" stroke="${INK}" stroke-width="4"/>
+  <circle cx="45" cy="21" r="11" fill="#FF8FAE" stroke="${INK}" stroke-width="4"/>
+  <circle cx="47" cy="47" r="8" fill="#FFC63F" stroke="${INK}" stroke-width="4"/>
+  <circle cx="17" cy="33" r="3.5" fill="#fff"/><circle cx="41.5" cy="17.5" r="2.6" fill="#fff"/>
+  <circle cx="44.5" cy="45" r="2" fill="#fff"/>
 </svg>`,
 mole:`<svg viewBox="0 0 64 64">
-  <ellipse cx="32" cy="54" rx="27" ry="8" fill="#4A2F1E" stroke="${INK}" stroke-width="3.5"/>
-  <circle cx="16" cy="12" r="7" fill="#B98A5F" stroke="${INK}" stroke-width="3.5"/>
-  <circle cx="48" cy="12" r="7" fill="#B98A5F" stroke="${INK}" stroke-width="3.5"/>
-  <circle cx="16" cy="12" r="2.8" fill="#FFB8C9"/>
-  <circle cx="48" cy="12" r="2.8" fill="#FFB8C9"/>
-  <ellipse cx="32" cy="33" rx="22" ry="25" fill="#B98A5F" stroke="${INK}" stroke-width="3.5"/>
-  <ellipse cx="32" cy="42" rx="14" ry="13" fill="#E9CBA4"/>
-  <circle cx="23" cy="27" r="2.6" fill="${INK}"/>
-  <circle cx="41" cy="27" r="2.6" fill="${INK}"/>
-  <circle cx="14" cy="36" r="3.2" fill="#FF9FB4" opacity=".8"/>
-  <circle cx="50" cy="36" r="3.2" fill="#FF9FB4" opacity=".8"/>
-  <path d="M19 38 L7 34 M20 44 L8 48 M45 38 L57 34 M44 44 L56 48" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>
-  <ellipse cx="32" cy="37" rx="4" ry="3.2" fill="#FF8FAE" stroke="${INK}" stroke-width="2"/>
-  <path d="M27 46 q5 4 10 0" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>
-  <ellipse cx="23" cy="56" rx="7" ry="4.5" fill="#B98A5F" stroke="${INK}" stroke-width="3"/>
-  <ellipse cx="41" cy="56" rx="7" ry="4.5" fill="#B98A5F" stroke="${INK}" stroke-width="3"/>
+  <path d="M8 58 Q12 40 32 36 Q52 40 56 58 Z" fill="#8A5A3B" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="17" cy="15" r="6.5" fill="#B98A5F" stroke="${INK}" stroke-width="3.5"/>
+  <circle cx="47" cy="15" r="6.5" fill="#B98A5F" stroke="${INK}" stroke-width="3.5"/>
+  <circle cx="17" cy="15" r="2.6" fill="#FFB8C9"/><circle cx="47" cy="15" r="2.6" fill="#FFB8C9"/>
+  <ellipse cx="32" cy="27" rx="18" ry="16" fill="#B98A5F" stroke="${INK}" stroke-width="4"/>
+  <ellipse cx="32" cy="34" rx="10" ry="7.5" fill="#E9CBA4"/>
+  <circle cx="25" cy="23" r="2.2" fill="${INK}"/><circle cx="39" cy="23" r="2.2" fill="${INK}"/>
+  <circle cx="19" cy="29" r="2.6" fill="#FF9FB4" opacity=".8"/><circle cx="45" cy="29" r="2.6" fill="#FF9FB4" opacity=".8"/>
+  <path d="M20 32 L9 29 M20 35 L10 37 M44 32 L55 29 M44 35 L54 37" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="32" cy="31" rx="3.4" ry="2.7" fill="#FF8FAE" stroke="${INK}" stroke-width="3"/>
 </svg>`,
 feed:`<svg viewBox="0 0 64 64">
   <path d="M32 22 q0 -8 6 -12" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
@@ -875,6 +871,19 @@ const HOG_SVG=`<svg class="hog" viewBox="0 0 120 130" preserveAspectRatio="xMidY
   <path d="M53 108 q7 6 14 0" fill="none" stroke="${INK}" stroke-width="3.5" stroke-linecap="round"/>
 </svg>`;
 
+/* the red bird (facing right; flipped with CSS when flying left) */
+const BIRD_SVG=`<svg viewBox="0 0 120 90">
+  <path d="M20 48 L2 34 L10 50 L2 66 Z" fill="#C93434" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="56" cy="50" rx="32" ry="25" fill="#E8483C" stroke="${INK}" stroke-width="4"/>
+  <ellipse cx="50" cy="59" rx="16" ry="10" fill="#FFB199"/>
+  <circle cx="86" cy="34" r="17" fill="#E8483C" stroke="${INK}" stroke-width="4"/>
+  <path d="M101 30 L117 35 L101 42 Z" fill="#FFA23E" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round"/>
+  <circle cx="90" cy="30" r="5.5" fill="#fff" stroke="${INK}" stroke-width="2.5"/>
+  <circle cx="91.5" cy="31" r="2.4" fill="${INK}"/>
+  <path d="M74 16 q8 -10 16 -5 q-1 9 -10 10 q-6 0 -6 -5 Z" fill="#C93434" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
+  <g class="wing"><path d="M46 46 q-18 -13 -34 -4 q11 17 34 14 Z" fill="#C93434" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/></g>
+</svg>`;
+
 /* ================= stars / persistence ================= */
 let best={}; try{best=JSON.parse(localStorage.getItem('pp_best'))||{}}catch(e){}
 const GAMES={
@@ -882,8 +891,8 @@ const GAMES={
     blurb:'Flip over two cards each turn. Can you find all six animal friends?'},
   tune:{name:'Copy the Tune',color:'#A884E0',
     blurb:'A big-kid game! The frog sings a little song — listen carefully, then tap the pads back in the same order.'},
-  pop:{name:'Pop Together',color:'#5BB8E8',
-    blurb:'This one needs TWO hands! Tap a bubble on one side, then quickly tap its twin on the other side.'},
+  bubbles:{name:'Bubble Sky',color:'#5BB8E8',
+    blurb:'Bubbles of every size drift around the sky — pop as many as you can with your fingers! But look out for the red bird…'},
   mole:{name:'Mole Meadow',color:'#4CC38A',
     blurb:'Tap the moles as they pop out of their burrows — but don\u2019t tickle the prickly hedgehogs!'},
   pattern:{name:'Pattern Party',color:'#FFA23E',
@@ -985,65 +994,139 @@ Games.memory={
     } }
 };
 
-/* ================= GAME 2 : POP TOGETHER (two hands) ================= */
-Games.pop={
-  popped:0,lock:null,alive:false,busy:false,bubbles:[],roundT:null,lockT:null,respT:null,introT:null,
-  start(){ const st=$('#popStage');
-    st.querySelectorAll('.bubble').forEach(b=>b.remove()); this.bubbles=[];
-    clearTimeout(this.roundT);clearTimeout(this.lockT);clearTimeout(this.respT);clearTimeout(this.introT);
-    Object.assign(this,{popped:0,lock:null,alive:true,busy:false});
-    makeDots($('#popDots'),10); setDots($('#popDots'),0);
-    $('#popHint').textContent='Tap one bubble… then the other one — fast!';
-    $('#popHint').classList.remove('off');
-    $('#plStar').setAttribute('d',starPath(0,0,14));
-    this.introT=setTimeout(()=>this.spawn(),450); },
-  stop(){ this.alive=false;
-    clearTimeout(this.roundT);clearTimeout(this.lockT);clearTimeout(this.respT);clearTimeout(this.introT);
-    $('#popStage').querySelectorAll('.bubble').forEach(b=>b.remove());
-    this.bubbles=[]; $('#popLink').classList.add('off'); },
-  spawn(){ if(!this.alive)return; this.busy=false; this.lock=null;
-    const st=$('#popStage'), r=st.getBoundingClientRect();
-    const size=rnd(105,150), y=rnd(.22,.68)*r.height;
-    const lx=rnd(.10,.28)*r.width, rx=rnd(.70,.88)*r.width;
-    const col=['#FF6F61','#4CC38A','#FF8FAE','#FFA23E'][(Math.random()*4)|0];
-    const mk=(x,delay)=>{ const b=document.createElement('div'); b.className='bubble';
-      b.style.setProperty('--c',col); b.style.setProperty('--bs',size+'px');
-      b.style.left=x+'px'; b.style.top=y+'px'; b.style.animationDelay=delay+'s';
-      b.innerHTML='<svg class="ring" viewBox="0 0 100 100" aria-hidden="true">'+
-        '<circle cx="50" cy="50" r="46" pathLength="100"/></svg>';
-      b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();this.onBubble(b)});
-      st.appendChild(b); this.bubbles.push(b); };
-    mk(lx,0); mk(rx,.35);
-    requestAnimationFrame(()=>{ const L=$('#plLine');
-      L.setAttribute('x1',lx);L.setAttribute('y1',y);L.setAttribute('x2',rx);L.setAttribute('y2',y);
-      $('#plStarP').setAttribute('transform',`translate(${(lx+rx)/2} ${y})`);
-      $('#popLink').classList.remove('off'); });
-    this.roundT=setTimeout(()=>this.fail(),5000); },
-  onBubble(b){ if(!this.alive||this.busy)return;
-    if(b.classList.contains('pop')||b.classList.contains('miss'))return;
-    if(this.lock===b)return;
-    if(!this.lock){ this.lock=b; b.classList.add('locked'); Sfx.tap();
-      this.lockT=setTimeout(()=>this.fail(),1500); }
-    else { const a=this.lock; this.lock=null; clearTimeout(this.lockT); this.popPair(a,b); } },
-  fail(){ if(!this.alive||this.busy)return; this.busy=true;
-    clearTimeout(this.roundT);clearTimeout(this.lockT);
-    $('#popLink').classList.add('off'); Sfx.wrong();
-    this.bubbles.forEach(b=>b.classList.add('miss'));
-    this.respT=setTimeout(()=>{this.bubbles.forEach(b=>b.remove());this.bubbles=[];this.spawn()},680); },
-  popPair(a,b){ this.busy=true;
-    clearTimeout(this.roundT);clearTimeout(this.lockT);
-    $('#popLink').classList.add('off');
-    a.classList.add('pop'); b.classList.add('pop'); Sfx.pop(); Sfx.correct();
-    const stR=$('#popStage').getBoundingClientRect();
-    [a,b].forEach(el=>{ const x=parseFloat(el.style.left),y=parseFloat(el.style.top);
-      Fx.burst(stR.left+x,stR.top+y,22); });
-    this.popped++; setDots($('#popDots'),this.popped);
-    if(this.popped<3) $('#popHint').textContent='Great! Now the next two…';
-    else $('#popHint').classList.add('off');
-    this.respT=setTimeout(()=>{this.bubbles.forEach(el=>el.remove());this.bubbles=[];
-      if(this.popped>=10){this.alive=false;celebrate('pop',3,'Two hands are better than one!')}
-      else this.spawn();},780); }
+/* ================= GAME 2 : BUBBLE SKY (multi-touch popping) ================= */
+Games.bubbles={
+  popped:0,GOAL:20,birdsTouched:0,alive:false,
+  bubbles:[],birds:[],timers:[],spawnT:null,birdT:null,_raf:null,_last:0,
+  COLORS:['#5BB8E8','#FF8FAE','#FFC63F','#4CC38A','#FFA23E','#A884E0'],
+  start(){
+    this.stop(); this.alive=true;
+    Object.assign(this,{popped:0,birdsTouched:0});
+    makeDots($('#bubDots'),10); setDots($('#bubDots'),0);
+    $('#bubHint').classList.remove('off');
+    this.maintain();                      /* keeps 7 bubbles drifting at all times */
+    this.scheduleBird(3500);
+    this._last=0;
+    this._raf=requestAnimationFrame(t=>this.loop(t));
+  },
+  stop(){
+    this.alive=false;
+    clearTimeout(this.spawnT); clearTimeout(this.birdT);
+    if(this._raf)cancelAnimationFrame(this._raf); this._raf=null;
+    this.timers.forEach(clearTimeout); this.timers=[];
+    const st=$('#bubStage');
+    st.querySelectorAll('.bbub,.bbird').forEach(e=>e.remove());
+    this.bubbles=[]; this.birds=[];
+  },
+  /* ---- bubbles ---- */
+  maintain(){ if(!this.alive)return;
+    while(this.bubbles.length<7) this.spawnBubble();
+    this.spawnT=setTimeout(()=>this.maintain(),600); },
+  spawnBubble(){
+    const st=$('#bubStage'), r=st.getBoundingClientRect();
+    const size=rnd(60,150);
+    const b=document.createElement('div'); b.className='bbub';
+    b.style.setProperty('--c',this.COLORS[(Math.random()*this.COLORS.length)|0]);
+    b.style.setProperty('--bs',size+'px');
+    b._size=size;
+    b._x=rnd(size/2+8,Math.max(size/2+9,r.width-size/2-8));
+    b._y=rnd(size/2+8,Math.max(size/2+9,r.height-size/2-8));
+    const a=rnd(0,Math.PI*2);
+    const sp=rnd(22,52)*(1+(150-size)/240);   /* smaller = a bit zippier */
+    b._vx=Math.cos(a)*sp; b._vy=Math.sin(a)*sp;
+    b._ph=rnd(0,6);
+    b.style.left=b._x+'px'; b.style.top=b._y+'px';
+    st.appendChild(b); this.bubbles.push(b);
+  },
+  popBubble(b,i){
+    this.bubbles.splice(i,1);
+    b.classList.add('pop'); Sfx.pop(); Sfx.correct();
+    const stR=$('#bubStage').getBoundingClientRect();
+    Fx.burst(stR.left+b._x,stR.top+b._y,14);
+    this.popped++;
+    setDots($('#bubDots'),Math.min(10,Math.ceil(this.popped/2)));
+    if(this.popped===4)$('#bubHint').classList.add('off');
+    const el=b; this.timers.push(setTimeout(()=>el.remove(),340));
+    if(this.popped>=this.GOAL){ this.alive=false;
+      const msg=this.birdsTouched>0
+        ?'All bubbles popped — and you woke the red bird!'
+        :'All bubbles popped! Watch out for that bird…';
+      celebrate('bubbles',3,msg); }
+  },
+  /* ---- the red bird ---- */
+  scheduleBird(d){ if(!this.alive)return;
+    clearTimeout(this.birdT);
+    this.birdT=setTimeout(()=>this.spawnBird(),d); },
+  spawnBird(){
+    if(!this.alive)return;
+    const st=$('#bubStage'), r=st.getBoundingClientRect();
+    const dir=Math.random()<.5?1:-1;
+    const el=document.createElement('div');
+    el.className='bbird'+(dir<0?' left':'');
+    el.innerHTML=BIRD_SVG;
+    el._dir=dir; el._t=0; el._startled=false;
+    el._speed=rnd(120,175);
+    el._baseY=rnd(.15,.62)*r.height;
+    el._x=dir>0?-130:r.width+130; el._y=el._baseY;
+    el.style.left=el._x+'px'; el.style.top=el._y+'px';
+    st.appendChild(el); this.birds.push(el);
+    this.scheduleBird(rnd(7000,12000));   /* next visitor booked */
+  },
+  startle(bd){
+    if(bd._startled)return;
+    bd._startled=true; this.birdsTouched++;
+    Sfx.squawk();
+    bd.classList.add('ruffle');
+    const stR=$('#bubStage').getBoundingClientRect();
+    Fx.burst(stR.left+bd._x,stR.top+bd._y+15,16,
+      {shape:'circle',colors:['#E8483C','#C93434','#FFC63F','#FFB199']});
+    this.timers.push(setTimeout(()=>bd.classList.remove('ruffle'),600));
+  },
+  /* ---- multi-touch hit testing: EVERY finger pops ---- */
+  checkHit(e){
+    if(!this.alive)return;
+    if(e.pointerType==='mouse'&&e.buttons===0)return;  /* no popping by mouse-hover */
+    const st=$('#bubStage'), r=st.getBoundingClientRect();
+    const px=e.clientX-r.left, py=e.clientY-r.top;
+    for(const bd of this.birds){
+      if(!bd._startled && Math.abs(px-bd._x)<58 && Math.abs(py-(bd._y+15))<48)
+        this.startle(bd);
+    }
+    for(let i=this.bubbles.length-1;i>=0;i--){
+      const b=this.bubbles[i], rad=b._size/2+6;
+      const dx=px-b._x, dy=py-b._y;
+      if(dx*dx+dy*dy<rad*rad) this.popBubble(b,i);
+    }
+  },
+  /* ---- animation loop ---- */
+  loop(ts){
+    if(!this.alive)return;
+    if(!this._last)this._last=ts;
+    const dt=Math.min(.05,(ts-this._last)/1000); this._last=ts;
+    const st=$('#bubStage'), r=st.getBoundingClientRect();
+    for(const b of this.bubbles){
+      b._x+=b._vx*dt; b._y+=b._vy*dt; b._ph+=dt*2;
+      const rad=b._size/2;
+      if(b._x<rad){b._x=rad;b._vx*=-1} if(b._x>r.width-rad){b._x=r.width-rad;b._vx*=-1}
+      if(b._y<rad){b._y=rad;b._vy*=-1} if(b._y>r.height-rad){b._y=r.height-rad;b._vy*=-1}
+      b.style.left=b._x+'px';
+      b.style.top=(b._y+Math.sin(b._ph)*4)+'px';
+    }
+    for(let i=this.birds.length-1;i>=0;i--){
+      const bd=this.birds[i];
+      bd._t+=dt;
+      bd._x+=bd._dir*bd._speed*(bd._startled?2.4:1)*dt;
+      bd._y=bd._baseY+Math.sin(bd._t*3.2)*26;
+      bd.style.left=bd._x+'px'; bd.style.top=bd._y+'px';
+      if(bd._x<-150||bd._x>r.width+150){
+        bd.remove(); this.birds.splice(i,1);
+      }
+    }
+    this._raf=requestAnimationFrame(t=>this.loop(t));
+  }
 };
+ $('#bubStage').addEventListener('pointerdown',e=>{e.preventDefault();Games.bubbles.checkHit(e)});
+ $('#bubStage').addEventListener('pointermove',e=>{Games.bubbles.checkHit(e)}); /* fingers can sweep */
 
 /* ================= GAME 3 : MOLE MEADOW ================= */
 Games.mole={
@@ -1129,7 +1212,7 @@ Games.feed={
     $('#reqNum').textContent=left>0?left+' more!':'Yummy!';
     setDots($('#reqDots'),this.fed); },
   eat(f,mx,my,off){
-    Sfx.correct();   /* ★ bell the moment the right snack is dropped */
+    Sfx.correct();
     const img=f.querySelector('.fimg'),fr=img.getBoundingClientRect();
     img.style.transition='transform .26s cubic-bezier(.4,0,.9,.4), opacity .26s';
     img.style.transform=`translate(${off.dx+mx-fr.left-fr.width/2}px,${off.dy+my-fr.top-fr.height/2}px) scale(.15)`;
@@ -1234,8 +1317,8 @@ Games.tune={
       const f=$('#tuneFrog'); f.classList.remove('sing'); void f.offsetWidth; f.classList.add('sing');
     },500+i*gap)));
     this.timers.push(setTimeout(()=>this.beginInput(),500+this.seq.length*gap+250)); },
-  flash(p,d=360,silent=false){ const el=$$('.pad')[p]; if(!el)return;
-    el.classList.add('lit'); if(!silent) Sfx.note(p);
+  flash(p,d=360){ const el=$$('.pad')[p]; if(!el)return;
+    el.classList.add('lit'); Sfx.note(p);
     this.timers.push(setTimeout(()=>el.classList.remove('lit'),d)); },
   beginInput(){ if(!this.alive)return; this.phase='input'; this.idx=0;
     this.say('Your turn!',true); },
@@ -1343,7 +1426,6 @@ Games.pattern={
 
 /* ---------- APP MODE: fullscreen, landscape, keep-awake ---------- */
 (function(){
-  /* keep the screen awake while your child plays */
   let wake=null;
   async function keepAwake(){
     try{ if('wakeLock' in navigator) wake=await navigator.wakeLock.request('screen'); }catch(e){}
@@ -1355,7 +1437,6 @@ Games.pattern={
     keepAwake(); document.removeEventListener('pointerdown',once);
   },{capture:true});
 
-  /* fullscreen button on the hub (next to the sound button) */
   const btn=document.createElement('button');
   btn.className='pill'; btn.setAttribute('aria-label','fullscreen');
   btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="#33302B" stroke-width="2.6" '+
@@ -1372,7 +1453,6 @@ Games.pattern={
   const hud=document.querySelector('.hud');
   if(hud) hud.insertBefore(btn,hud.firstChild);
 
-  /* offline support */
   if('serviceWorker' in navigator && location.protocol.startsWith('http')){
     addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
   }
