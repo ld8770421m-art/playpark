@@ -761,33 +761,87 @@ const Sfx=(()=>{
       part(f*1.2,.07,.24,'sine',0,f*2.6,.1);
       nz(.03,.12,1900,'bandpass',3); },
 
+    /* Mole bonk — Hammer Bonk: cartoon mallet drop + ringing wobble */
     bonk(){ if(!ac())return;
-      part(R(150),.13,.26,'sine',0,64,.1);
-      nz(.035,.1,380,'lowpass',1); },
+      const n=ctx.currentTime;
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(520,n);
+      o.frequency.exponentialRampToValueAtTime(70,n+.09);
+      const lfo=ctx.createOscillator(),lg=ctx.createGain();
+      lfo.type='sine';
+      lfo.frequency.setValueAtTime(18,n+.09);
+      lfo.frequency.exponentialRampToValueAtTime(5,n+.4);
+      lg.gain.setValueAtTime(0,n+.09);
+      lg.gain.linearRampToValueAtTime(28,n+.13);
+      lg.gain.linearRampToValueAtTime(0,n+.4);
+      lfo.connect(lg); lg.connect(o.frequency);
+      g.gain.setValueAtTime(.0001,n);
+      g.gain.linearRampToValueAtTime(.3,n+.004);
+      g.gain.exponentialRampToValueAtTime(.0001,n+.4);
+      o.connect(g); g.connect(out);
+      const s=ctx.createGain();s.gain.value=.15;g.connect(s);s.connect(verb);
+      o.start(n);o.stop(n+.45); lfo.start(n); lfo.stop(n+.45);
+      part(1040,.08,.09,'triangle',0,150);
+      nz(.035,.16,850,'bandpass',2); },
+
+    /* Snack Time swallow — Wobble Gulp: throat vibrato + satisfied mmm */
     gulp(){ if(!ac())return;
-      part(340,.18,.16,'sine',0,95,.12);
-      nz(.05,.05,300,'lowpass',1,.02); },
+      const n=ctx.currentTime;
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(400,n);
+      o.frequency.exponentialRampToValueAtTime(80,n+.34);
+      const lfo=ctx.createOscillator(),lg=ctx.createGain();
+      lfo.type='sine'; lfo.frequency.setValueAtTime(14,n);
+      lfo.frequency.exponentialRampToValueAtTime(7,n+.34);
+      lg.gain.setValueAtTime(45,n);
+      lg.gain.linearRampToValueAtTime(8,n+.3);
+      lfo.connect(lg); lg.connect(o.frequency);
+      g.gain.setValueAtTime(.0001,n);
+      g.gain.linearRampToValueAtTime(.18,n+.015);
+      g.gain.setValueAtTime(.14,n+.22);
+      g.gain.exponentialRampToValueAtTime(.0001,n+.36);
+      o.connect(g); g.connect(out);
+      const s=ctx.createGain();s.gain.value=.12;g.connect(s);s.connect(verb);
+      o.start(n);o.stop(n+.4); lfo.start(n); lfo.stop(n+.4);
+      nz(.05,.05,320,'lowpass',1,.02);
+      part(210,.12,.07,'triangle',.4,190,.2); },
+
+    /* Snack Time chew — Big Crunch: one huge bite with tooth-crack */
     chomp(){ if(!ac())return;
-      nz(.045,.13,950,'bandpass',2);
-      nz(.05,.12,700,'bandpass',2,.11);
-      part(120,.07,.08,'sine',0,80);
-      part(110,.08,.08,'sine',.11,70); },
+      nz(.16,.2,1600,'bandpass',1.2,0,420);
+      nz(.02,.16,3200,'highpass',1,0);
+      nz(.025,.13,2600,'highpass',1,.05);
+      part(140,.1,.12,'sine',.02,70);
+      nz(.11,.15,900,'bandpass',1.6,.2,300);
+      part(120,.08,.1,'sine',.2,60); },
+
+    /* Hedgehog boing — Rubber Snap: stretch down, then THWOING! */
     boing(){ if(!ac())return;
       const n=ctx.currentTime;
       const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='triangle';
+      o.frequency.setValueAtTime(240,n);
+      o.frequency.exponentialRampToValueAtTime(80,n+.16);
+      o.frequency.setValueAtTime(80,n+.16);
+      o.frequency.exponentialRampToValueAtTime(520,n+.2);
+      o.frequency.exponentialRampToValueAtTime(330,n+.5);
       const lfo=ctx.createOscillator(),lg=ctx.createGain();
-      o.type='sine';
-      o.frequency.setValueAtTime(210,n);
-      o.frequency.exponentialRampToValueAtTime(96,n+.4);
-      lfo.frequency.value=10.5; lg.gain.setValueAtTime(55,n);
-      lg.gain.exponentialRampToValueAtTime(4,n+.38);
+      lfo.type='sine'; lfo.frequency.value=30;
+      lg.gain.setValueAtTime(0,n+.2);
+      lg.gain.linearRampToValueAtTime(55,n+.24);
+      lg.gain.linearRampToValueAtTime(6,n+.5);
       lfo.connect(lg); lg.connect(o.frequency);
       g.gain.setValueAtTime(.0001,n);
-      g.gain.linearRampToValueAtTime(.14,n+.01);
-      g.gain.exponentialRampToValueAtTime(.0001,n+.42);
+      g.gain.linearRampToValueAtTime(.2,n+.01);
+      g.gain.setValueAtTime(.14,n+.16);
+      g.gain.exponentialRampToValueAtTime(.0001,n+.52);
       o.connect(g); g.connect(out);
-      const s=ctx.createGain(); s.gain.value=.15; g.connect(s); s.connect(verb);
-      o.start(n); o.stop(n+.5); lfo.start(n); lfo.stop(n+.5); },
+      const s=ctx.createGain();s.gain.value=.15;g.connect(s);s.connect(verb);
+      o.start(n);o.stop(n+.55); lfo.start(n); lfo.stop(n+.55);
+      nz(.03,.1,1400,'bandpass',3,.16); },
+
     ding(){ if(!ac())return;
       mallet(1046.5,0,.15,.7,.4);
       part(2093,.25,.05,'sine',.01,null,.4); },
@@ -1367,7 +1421,8 @@ Games.feed={
     img.style.transform=`translate(${off.dx+mx-fr.left-fr.width/2}px,${off.dy+my-fr.top-fr.height/2}px) scale(.15)`;
     img.style.opacity='.2'; f.classList.add('gone');
     this.timers.push(setTimeout(()=>{ f.remove(); Sfx.gulp();
-      monsterEl.classList.add('chew'); Sfx.chomp();
+      monsterEl.classList.add('chew');
+      this.timers.push(setTimeout(()=>Sfx.chomp(),260));
       this.timers.push(setTimeout(()=>monsterEl.classList.remove('chew'),600));
       this.fed++; this.updateReq();
       if(this.fed>=this.target.count){
