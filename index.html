@@ -704,59 +704,55 @@ const Sfx=(()=>{
       part(233,.22,.15,'triangle',.15,220,.2);
       nz(.03,.06,500,'lowpass',1,.15); },
 
-      /* the red bird: cartoon "angry-bird" scream — SHRI-ee-ah!
-       rising snap → wailing warble → angry "YAH!" — worse each poke (1–3) */
+    /* the red bird: Tiny Ducky — squeaky rubber-duck squeezes,
+       1 squeak → 2 squeaks → 3 squeaks + a long squeal as it flees */
     squawk(level=1){ if(!ac())return;
       const lv=Math.min(3,Math.max(1,level));
       const n=ctx.currentTime;
 
-      /* rasp: angrier = more distortion drive */
-      const drive=1.5+lv*.8;
-      const curve=new Float32Array(256);
-      for(let i=0;i<256;i++){const x=i/127.5-1;curve[i]=Math.tanh(drive*x);}
-
-      /* the signature cartoon warble: square-LFO trill on the voice pitch */
-      const tRate=26+lv*9, tDepth=170+lv*70;
-
-      /* one syllable: 2 detuned saws → nasal formant filter → rasp */
-      function syll(t,fA,fB,dur,amp){
+      function squeak(t,f0,fTop,dur,amp,fall){
+        fall=fall||.86;
+        const s=ctx.currentTime+t;
         const o1=ctx.createOscillator(),o2=ctx.createOscillator();
-        const bp=ctx.createBiquadFilter(),sh=ctx.createWaveShaper(),g=ctx.createGain();
-        bp.type='bandpass'; bp.frequency.value=(fA+fB)/2*1.05; bp.Q.value=1.4;
+        o1.type='triangle'; o2.type='square';
+        o1.frequency.setValueAtTime(f0,s);
+        o1.frequency.exponentialRampToValueAtTime(fTop,s+dur*.3);
+        o1.frequency.exponentialRampToValueAtTime(fTop*fall,s+dur);
+        o2.frequency.setValueAtTime(f0*1.004,s);
+        o2.frequency.exponentialRampToValueAtTime(fTop*1.004,s+dur*.3);
+        o2.frequency.exponentialRampToValueAtTime(fTop*fall*1.004,s+dur);
+        const g2=ctx.createGain(); g2.gain.value=.18;
+        const bp=ctx.createBiquadFilter(); bp.type='bandpass';
+        bp.frequency.value=Math.min(4200,fTop*1.5); bp.Q.value=1.6;
+        const sh=ctx.createWaveShaper();
+        const curve=new Float32Array(256);
+        for(let i=0;i<256;i++){const x=i/127.5-1;curve[i]=Math.tanh(1.3*x);}
         sh.curve=curve;
-        o1.type='sawtooth'; o2.type='sawtooth'; o2.detune.value=13;
-        o1.frequency.setValueAtTime(fA,n+t);
-        o1.frequency.exponentialRampToValueAtTime(Math.max(60,fB),n+t+dur);
-        o2.frequency.setValueAtTime(fA*1.02,n+t);
-        o2.frequency.exponentialRampToValueAtTime(Math.max(60,fB*1.02),n+t+dur);
+        const g=ctx.createGain();
+        g.gain.setValueAtTime(.0001,s);
+        g.gain.linearRampToValueAtTime(amp,s+.012);
+        g.gain.setValueAtTime(amp*.9,s+dur*.65);
+        g.gain.exponentialRampToValueAtTime(.0001,s+dur);
         const lfo=ctx.createOscillator(),lg=ctx.createGain();
-        lfo.type='square'; lfo.frequency.setValueAtTime(tRate,n+t);
-        lfo.frequency.linearRampToValueAtTime(tRate*1.35,n+t+dur);
-        lg.gain.setValueAtTime(tDepth*.4,n+t);
-        lg.gain.linearRampToValueAtTime(tDepth,n+t+dur*.6);
+        lfo.type='sine'; lfo.frequency.value=8.5;
+        lg.gain.setValueAtTime(fTop*.02,s);
+        lg.gain.linearRampToValueAtTime(fTop*.045,s+dur);
         lfo.connect(lg); lg.connect(o1.frequency); lg.connect(o2.frequency);
-        g.gain.setValueAtTime(.0001,n+t);
-        g.gain.linearRampToValueAtTime(amp,n+t+.014);
-        g.gain.setValueAtTime(amp*.85,n+t+dur*.72);
-        g.gain.exponentialRampToValueAtTime(.0001,n+t+dur);
-        o1.connect(bp); o2.connect(bp); bp.connect(sh); sh.connect(g); g.connect(out);
-        const vs=ctx.createGain(); vs.gain.value=.16; g.connect(vs); vs.connect(verb);
-        o1.start(n+t); o1.stop(n+t+dur+.05);
-        o2.start(n+t); o2.stop(n+t+dur+.05);
-        lfo.start(n+t); lfo.stop(n+t+dur+.05);
+        o1.connect(bp); o2.connect(g2); g2.connect(bp);
+        bp.connect(sh); sh.connect(g); g.connect(out);
+        const vs=ctx.createGain(); vs.gain.value=.14; g.connect(vs); vs.connect(verb);
+        o1.start(s); o1.stop(s+dur+.05);
+        o2.start(s); o2.stop(s+dur+.05);
+        lfo.start(s); lfo.stop(s+dur+.05);
       }
 
-      /* SHRI- : snaps up to the scream peak */
-      syll(0  , 500+lv*80 , 1650+lv*260, .13+lv*.01, .21);
-      /* -ee-ah : the wailing fall, warbling hard */
-      syll(.11, 1650+lv*260, 620+lv*70 , .30+lv*.06, .19);
-      /* YAH!   : angry punctuation on the end */
-      syll(.44+lv*.05, 1050+lv*140, 460+lv*60, .14+lv*.03, .17);
-      /* 3rd poke: one extra furious tail note */
-      if(lv>=3) syll(.84, 860, 380, .16, .15);
-
-      /* breathy shriek onset */
-      nz(.06,.15,2300,'bandpass',1.6,0,1000,.2);
+      const base=1100+lv*90, top=1950+lv*180;
+      const gap=lv>=3?.09:.13, dur=lv>=3?.13:.15;
+      for(let i=0;i<lv;i++){
+        squeak(i*gap, base, top, dur, .19);
+        nz(.04,.05,3600,'highpass',1,i*gap);
+      }
+      if(lv>=3) squeak(lv*gap, base*.9, top*1.12, .42, .18, .55);
     },
 
     /* bubble pop: rising chirp + click, randomized so it never repeats */
