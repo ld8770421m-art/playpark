@@ -595,89 +595,186 @@ const rnd=(a,b)=>a+Math.random()*(b-a);
 function starPath(cx,cy,r){let d='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.46:r;
   d+=(i?'L':'M')+(cx+Math.cos(a)*rr).toFixed(1)+' '+(cy+Math.sin(a)*rr).toFixed(1)}return d+'Z'}
 const starSVG=(cls='')=>`<svg class="${cls}" viewBox="0 0 24 24"><path d="${starPath(12,12.8,10.2)}"/></svg>`;
-
-/* ============ sound — ONE language for all games ============
-   correct → bright high BELL · wrong → soft "cross" buzz
-   tap → neutral click · squawk(level) → the red bird, angrier each poke */
+  
+/* ============================================================
+   SOUND ENGINE v2 — professional micro-synth (no audio files)
+   • master bus: compressor + headroom     • convolution reverb send
+   • additive "mallet" voice (bell/xylophone) for rewards & pads
+   • filtered-noise transients so hits sound physical
+   • pitch jitter so nothing repeats robotically
+   Public API unchanged — nothing else in the file needs editing.
+   ============================================================ */
 const Sfx=(()=>{
-  let ctx=null, muted=false;
+  let ctx=null, muted=false, out=null, verb=null, noiseBuf=null;
   try{muted=localStorage.getItem('pp_mute')==='1'}catch(e){}
-  const ac=()=>{ if(muted)return null;
-    try{ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
-      if(ctx.state==='suspended') ctx.resume(); return ctx; }catch(e){return null} };
-  function tone(f,d,type='sine',v=.25,f2=null,t=0){
-    const c=ac(); if(!c)return;
-    const o=c.createOscillator(),g=c.createGain(),n=c.currentTime+t;
-    o.type=type; o.frequency.setValueAtTime(f,n);
-    if(f2) o.frequency.exponentialRampToValueAtTime(Math.max(f2,1),n+d);
-    g.gain.setValueAtTime(.0001,n); g.gain.linearRampToValueAtTime(v,n+.015);
-    g.gain.exponentialRampToValueAtTime(.0001,n+d);
-    o.connect(g); g.connect(c.destination); o.start(n); o.stop(n+d+.05);
+
+  function ac(){
+    if(muted) return null;
+    try{
+      if(!ctx){
+        ctx=new (window.AudioContext||window.webkitAudioContext)();
+        /* master chain: every voice → compressor → master gain → speakers */
+        const comp=ctx.createDynamicsCompressor();
+        comp.threshold.value=-16; comp.knee.value=22; comp.ratio.value=4;
+        comp.attack.value=.004; comp.release.value=.16;
+        const mg=ctx.createGain(); mg.gain.value=.9;
+        comp.connect(mg); mg.connect(ctx.destination);
+        out=comp;
+        /* small generated reverb (impulse = decaying noise) */
+        const len=Math.floor(ctx.sampleRate*1.1);
+        const ir=ctx.createBuffer(2,len,ctx.sampleRate);
+        for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);
+          for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2);}
+        verb=ctx.createConvolver(); verb.buffer=ir;
+        const vg=ctx.createGain(); vg.gain.value=.5;
+        verb.connect(vg); vg.connect(comp);
+        /* shared white-noise buffer for transients */
+        const nlen=Math.floor(ctx.sampleRate*.5);
+        noiseBuf=ctx.createBuffer(1,nlen,ctx.sampleRate);
+        const nd=noiseBuf.getChannelData(0);
+        for(let i=0;i<nlen;i++) nd[i]=Math.random()*2-1;
+      }
+      if(ctx.state==='suspended') ctx.resume();
+      return ctx;
+    }catch(e){return null}
   }
-  function bell(f,t=0,v=.2){
-    const c=ac(); if(!c)return;
-    const n=c.currentTime+t;
-    const o=c.createOscillator(),g=c.createGain();
-    o.type='sine'; o.frequency.setValueAtTime(f,n);
-    g.gain.setValueAtTime(.0001,n); g.gain.linearRampToValueAtTime(v,n+.008);
-    g.gain.exponentialRampToValueAtTime(.0001,n+.6);
-    o.connect(g); g.connect(c.destination); o.start(n); o.stop(n+.65);
-    const o2=c.createOscillator(),g2=c.createGain();
-    o2.type='sine'; o2.frequency.setValueAtTime(f*2.76,n);
-    g2.gain.setValueAtTime(.0001,n); g2.gain.linearRampToValueAtTime(v*.3,n+.005);
-    g2.gain.exponentialRampToValueAtTime(.0001,n+.2);
-    o2.connect(g2); g2.connect(c.destination); o2.start(n); o2.stop(n+.25);
+
+  const R=(v,p=.035)=>v*(1+(Math.random()*2-1)*p);   /* pitch jitter */
+
+  /* one oscillator partial with fast attack + exponential decay */
+  function part(f,dur,amp,type='sine',t=0,bendTo=null,verbAmt=0){
+    const n=ctx.currentTime+t;
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=type; o.frequency.setValueAtTime(Math.max(1,f),n);
+    if(bendTo) o.frequency.exponentialRampToValueAtTime(Math.max(1,bendTo),n+dur);
+    g.gain.setValueAtTime(.0001,n);
+    g.gain.linearRampToValueAtTime(amp,n+.006);
+    g.gain.exponentialRampToValueAtTime(.0001,n+dur);
+    o.connect(g); g.connect(out);
+    if(verbAmt){const s=ctx.createGain();s.gain.value=verbAmt;g.connect(s);s.connect(verb);}
+    o.start(n); o.stop(n+dur+.06);
   }
+
+  /* filtered noise burst — the "physical" transient */
+  function nz(dur,amp,f,type='bandpass',q=1,t=0,f1=null,verbAmt=0){
+    const n=ctx.currentTime+t;
+    const s=ctx.createBufferSource(); s.buffer=noiseBuf; s.loop=true;
+    const fl=ctx.createBiquadFilter(); fl.type=type; fl.Q.value=q;
+    fl.frequency.setValueAtTime(Math.max(20,f),n);
+    if(f1) fl.frequency.exponentialRampToValueAtTime(Math.max(20,f1),n+dur);
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(.0001,n);
+    g.gain.linearRampToValueAtTime(amp,n+.004);
+    g.gain.exponentialRampToValueAtTime(.0001,n+dur);
+    s.connect(fl); fl.connect(g); g.connect(out);
+    if(verbAmt){const s2=ctx.createGain();s2.gain.value=verbAmt;g.connect(s2);s2.connect(verb);}
+    s.start(n); s.stop(n+dur+.05);
+  }
+
+  /* bell / xylophone mallet voice: fundamental + 2 partials + strike click */
+  function mallet(f,t=0,amp=.2,dur=.5,verbAmt=.25){
+    const F=R(f);
+    part(F,dur,amp,'sine',t,null,verbAmt);
+    part(F*2,dur*.32,amp*.32,'sine',t);
+    part(F*5.4,dur*.1,amp*.12,'sine',t);
+    nz(.02,amp*.25,3000,'highpass',1,t);
+  }
+
   return {
     unlock(){ if(!muted) ac(); },
     get muted(){return muted},
     toggle(){ muted=!muted; try{localStorage.setItem('pp_mute',muted?'1':'0')}catch(e){} return muted },
-    click(){tone(560,.07,'triangle',.16,720)},
-    tap(){tone(420,.06,'triangle',.13,540)},
-    correct(){ bell(1046.5,0,.2); bell(1318.5,.13,.18); },
-    wrong(){
-      const c=ac(); if(!c)return; const n=c.currentTime;
-      [[311,0,.13],[220,.16,.22]].forEach(([f,t,d])=>{
-        const o=c.createOscillator(),g=c.createGain(),fl=c.createBiquadFilter();
-        fl.type='lowpass'; fl.frequency.value=1300;
-        o.type='square'; o.frequency.setValueAtTime(f,n+t);
-        o.frequency.exponentialRampToValueAtTime(f*.8,n+t+d);
-        g.gain.setValueAtTime(.0001,n+t); g.gain.linearRampToValueAtTime(.11,n+t+.012);
-        g.gain.exponentialRampToValueAtTime(.0001,n+t+d);
-        o.connect(fl); fl.connect(g); g.connect(c.destination);
-        o.start(n+t); o.stop(n+t+d+.03);
-      });
-    },
-    /* the red bird: screech that gets higher, louder and more frantic per poke (1–3) */
-    squawk(level=1){
-      const c=ac(); if(!c)return; const n=c.currentTime;
+
+    /* UI — quiet neutral ticks (buttons are not musical instruments) */
+    click(){ if(!ac())return;
+      nz(.03,.1,2600,'highpass',1);
+      part(880,.05,.04,'sine',0,660); },
+    tap(){ if(!ac())return;
+      nz(.025,.07,1500,'highpass',1); },
+
+    /* ★ reward: quick rising sparkle C5→G5→C6 on the mallet voice */
+    correct(){ if(!ac())return;
+      mallet(523.25,0,.16,.42,.3);
+      mallet(784,.075,.15,.45,.3);
+      mallet(1046.5,.15,.17,.6,.35); },
+
+    /* ✗ wrong: soft two-note "uh-oh" — warm triangle, never harsh */
+    wrong(){ if(!ac())return;
+      part(311,.16,.14,'triangle',0,296,.15);
+      part(233,.22,.15,'triangle',.15,220,.2);
+      nz(.03,.06,500,'lowpass',1,.15); },
+
+    /* the red bird: swept-noise screech + distorted rasp; angrier per poke */
+    squawk(level=1){ if(!ac())return;
       const lv=Math.min(3,Math.max(1,level));
-      const base=1250+lv*170, dur=.4+lv*.07, vol=Math.min(.42,.3+lv*.05);
-      [0,9].forEach(det=>{
-        const o=c.createOscillator(),g=c.createGain();
-        const lfo=c.createOscillator(),lg=c.createGain();
-        o.type='sawtooth';
-        o.frequency.setValueAtTime(base+det*28,n);
-        o.frequency.exponentialRampToValueAtTime(Math.max(220,540-lv*70),n+dur);
-        lfo.frequency.value=24+lv*8; lg.gain.value=120+lv*35;
-        lfo.connect(lg); lg.connect(o.frequency);
-        g.gain.setValueAtTime(.0001,n);
-        g.gain.linearRampToValueAtTime(vol,n+.02);
-        g.gain.exponentialRampToValueAtTime(.0001,n+dur+.04);
-        o.connect(g); g.connect(c.destination);
-        o.start(n); o.stop(n+dur+.08); lfo.start(n); lfo.stop(n+dur+.08);
-      });
-    },
-    pop(){tone(880,.06,'square',.13,300)},
-    bonk(){tone(180,.09,'sine',.2,90)},
-    gulp(){tone(300,.22,'sine',.22,80)},
-    chomp(){tone(150,.07,'square',.16,90);tone(150,.07,'square',.14,90,.12)},
-    boing(){tone(170,.12,'sine',.22,430);tone(430,.14,'sine',.18,200,.12)},
-    ding(){tone(1244,.4,'sine',.18,1240);tone(1868,.3,'sine',.07,1860,.02)},
-    tada(){[523,659,784,1046].forEach((f,i)=>tone(f,.18,'triangle',.18,null,i*.11));tone(1046,.5,'sine',.14,null,.44)},
-    note(i){const F=[392,523.25,659.25,783.99];tone(F[i%4],.32,'triangle',.26)},
+      const base=1000+lv*180, dur=.38+lv*.06, n=ctx.currentTime;
+      nz(dur,.22+lv*.05,base*1.4,'bandpass',5,0,base*.6,.25);
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      const lfo=ctx.createOscillator(),lg=ctx.createGain();
+      const sh=ctx.createWaveShaper();
+      const curve=new Float32Array(256);
+      for(let i=0;i<256;i++){const x=i/127.5-1;curve[i]=Math.tanh(2.4*x);}
+      sh.curve=curve;
+      o.type='sawtooth';
+      o.frequency.setValueAtTime(base+lv*40,n);
+      o.frequency.exponentialRampToValueAtTime(Math.max(200,base*.42),n+dur);
+      lfo.type='square'; lfo.frequency.value=16+lv*7; lg.gain.value=90+lv*30;
+      lfo.connect(lg); lg.connect(o.frequency);
+      g.gain.setValueAtTime(.0001,n);
+      g.gain.linearRampToValueAtTime(.09+lv*.015,n+.02);
+      g.gain.setValueAtTime(.09+lv*.015,n+dur*.7);
+      g.gain.exponentialRampToValueAtTime(.0001,n+dur);
+      o.connect(sh); sh.connect(g); g.connect(out);
+      const s2=ctx.createGain(); s2.gain.value=.2; g.connect(s2); s2.connect(verb);
+      o.start(n); o.stop(n+dur+.05); lfo.start(n); lfo.stop(n+dur+.05); },
+
+    /* bubble pop: rising chirp + click, randomized so it never repeats */
+    pop(){ if(!ac())return;
+      const f=R(430,.18);
+      part(f*1.2,.07,.24,'sine',0,f*2.6,.1);
+      nz(.03,.12,1900,'bandpass',3); },
+
+    bonk(){ if(!ac())return;
+      part(R(150),.13,.26,'sine',0,64,.1);
+      nz(.035,.1,380,'lowpass',1); },
+    gulp(){ if(!ac())return;
+      part(340,.18,.16,'sine',0,95,.12);
+      nz(.05,.05,300,'lowpass',1,.02); },
+    chomp(){ if(!ac())return;
+      nz(.045,.13,950,'bandpass',2);
+      nz(.05,.12,700,'bandpass',2,.11);
+      part(120,.07,.08,'sine',0,80);
+      part(110,.08,.08,'sine',.11,70); },
+    boing(){ if(!ac())return;
+      const n=ctx.currentTime;
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      const lfo=ctx.createOscillator(),lg=ctx.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(210,n);
+      o.frequency.exponentialRampToValueAtTime(96,n+.4);
+      lfo.frequency.value=10.5; lg.gain.setValueAtTime(55,n);
+      lg.gain.exponentialRampToValueAtTime(4,n+.38);
+      lfo.connect(lg); lg.connect(o.frequency);
+      g.gain.setValueAtTime(.0001,n);
+      g.gain.linearRampToValueAtTime(.14,n+.01);
+      g.gain.exponentialRampToValueAtTime(.0001,n+.42);
+      o.connect(g); g.connect(out);
+      const s=ctx.createGain(); s.gain.value=.15; g.connect(s); s.connect(verb);
+      o.start(n); o.stop(n+.5); lfo.start(n); lfo.stop(n+.5); },
+    ding(){ if(!ac())return;
+      mallet(1046.5,0,.15,.7,.4);
+      part(2093,.25,.05,'sine',.01,null,.4); },
+    tada(){ if(!ac())return;
+      [[523.25,0],[659.25,.1],[784,.2],[1046.5,.32]].forEach(([f,t])=>
+        mallet(f,t,.16,.6,.3));
+      part(261.6,.8,.08,'sine',0,null,.2);         /* soft bass root */
+      nz(.7,.045,6500,'bandpass',.8,.05,null,.5);  /* sparkle shimmer */ },
+    note(i){ if(!ac())return;
+      const F=[392,523.25,659.25,783.99];
+      mallet(F[i%4],0,.26,.55,.22); },
   };
 })();
+
 document.addEventListener('pointerdown',()=>Sfx.unlock(),{capture:true});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 
